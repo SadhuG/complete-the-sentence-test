@@ -9,7 +9,7 @@ import Results from "./Results";
 import Timer from "./Timer";
 
 const Quiz: React.FC = () => {
-  const [questions, setQuestions] = useState<Question[]>(questionsData);
+  const [questions] = useState<Question[]>(questionsData);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
   const [userAnswers, setUserAnswers] = useState<UserAnswer[]>([]);
   const [filledBlanks, setFilledBlanks] = useState<Record<number, string>>({});
