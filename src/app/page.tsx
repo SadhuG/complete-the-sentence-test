@@ -1,5 +1,5 @@
 "use client";
-import { JSX, useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 // Define types for our data structure (Keep these as they are)
 interface Blank {
@@ -159,61 +159,6 @@ export default function App() {
   const [score, setScore] = useState<number>(0);
   const [quizStarted, setQuizStarted] = useState<boolean>(false);
 
-  // Handle going to next question - Wrap in useCallback
-  const handleNextQuestion = useCallback(() => {
-    // Save current answers to the userAnswers array
-    const currentQuestion = questions[currentQuestionIndex];
-    if (!currentQuestion) return; // Guard if no current question
-
-    const updatedAnswers = userAnswers.map((answer, index) => {
-      if (index === currentQuestionIndex) {
-        return {
-          ...answer,
-          blanks: answer.blanks.map((blank) => ({
-            ...blank,
-            // Use the filledBlanks state for the *current* question
-            userAnswer: filledBlanks[blank.blankId] || null,
-          })),
-        };
-      }
-      return answer; // Return other answers unchanged
-    });
-
-    setUserAnswers(updatedAnswers);
-
-    // Determine if we should go to next question or end quiz
-    if (currentQuestionIndex < questions.length - 1) {
-      setCurrentQuestionIndex((prev) => prev + 1);
-      setFilledBlanks({}); // Clear blanks for the new question
-      setTimeLeft(30); // Reset timer
-    } else {
-      // Calculate score based on fully correct questions only
-      const totalPossibleScore = 10; // Keep score out of 10
-      let correctQuestions = 0;
-
-      updatedAnswers.forEach((question) => {
-        // Check if ALL blanks in this question were answered correctly
-        const allBlanksCorrect = question.blanks.every(
-          (blank) => blank.userAnswer === blank.correctAnswer,
-        );
-
-        if (allBlanksCorrect) {
-          correctQuestions++;
-        }
-      });
-
-      // Calculate score as a proportion of correctly answered questions
-      const scaledScore = Math.round(
-        (correctQuestions / questions.length) * totalPossibleScore,
-      );
-
-      setScore(scaledScore);
-      setQuizCompleted(true);
-      setFilledBlanks({}); // Also clear blanks when quiz completes
-    }
-    // Add dependencies for useCallback
-  }, [currentQuestionIndex, questions, userAnswers, filledBlanks]);
-
   // Initialize answers array on component mount
   useEffect(() => {
     const initialAnswers: UserAnswer[] = questions.map((q) => ({
@@ -229,7 +174,6 @@ export default function App() {
     setFilledBlanks({});
   }, [questions]); // Dependency array includes questions
 
-  // Timer effect (Keep as is)
   // Timer effect with proper timeout handling
   useEffect(() => {
     if (!quizStarted || quizCompleted) return;
@@ -270,7 +214,6 @@ export default function App() {
     quizStarted,
     currentQuestionIndex,
     questions,
-    handleNextQuestion,
     filledBlanks,
   ]);
 
@@ -351,6 +294,60 @@ export default function App() {
     return filledValuesInCurrentQuestion.includes(word);
   };
 
+  // Handle going to next question - Wrap in useCallback
+  const handleNextQuestion = useCallback(() => {
+    // Save current answers to the userAnswers array
+    const currentQuestion = questions[currentQuestionIndex];
+    if (!currentQuestion) return; // Guard if no current question
+
+    const updatedAnswers = userAnswers.map((answer, index) => {
+      if (index === currentQuestionIndex) {
+        return {
+          ...answer,
+          blanks: answer.blanks.map((blank) => ({
+            ...blank,
+            // Use the filledBlanks state for the *current* question
+            userAnswer: filledBlanks[blank.blankId] || null,
+          })),
+        };
+      }
+      return answer; // Return other answers unchanged
+    });
+
+    setUserAnswers(updatedAnswers);
+
+    // Determine if we should go to next question or end quiz
+    if (currentQuestionIndex < questions.length - 1) {
+      setCurrentQuestionIndex((prev) => prev + 1);
+      setFilledBlanks({}); // Clear blanks for the new question
+      setTimeLeft(30); // Reset timer
+    } else {
+      // Calculate score based on fully correct questions only
+      const totalPossibleScore = 10; // Keep score out of 10
+      let correctQuestions = 0;
+
+      updatedAnswers.forEach((question) => {
+        // Check if ALL blanks in this question were answered correctly
+        const allBlanksCorrect = question.blanks.every(
+          (blank) => blank.userAnswer === blank.correctAnswer,
+        );
+
+        if (allBlanksCorrect) {
+          correctQuestions++;
+        }
+      });
+
+      // Calculate score as a proportion of correctly answered questions
+      const scaledScore = Math.round(
+        (correctQuestions / questions.length) * totalPossibleScore,
+      );
+
+      setScore(scaledScore);
+      setQuizCompleted(true);
+      setFilledBlanks({}); // Also clear blanks when quiz completes
+    }
+  }, [currentQuestionIndex, questions, userAnswers, filledBlanks]);
+
   // Render the sentence with blanks (Keep as is - logic adapts)
   const renderSentenceWithBlanks = () => {
     const currentQuestion = questions[currentQuestionIndex];
@@ -364,8 +361,6 @@ export default function App() {
 
     return (
       <div className="mb-6 text-lg leading-relaxed">
-        {" "}
-        {/* Added leading-relaxed for better spacing */}
         {parts.map((part, index) => (
           <span key={`part-${index}`}>
             {part}
@@ -419,267 +414,268 @@ export default function App() {
 
   // --- JSX Rendering ---
 
-  // Welcome screen (Keep as is)
-  if (!quizStarted) {
-    return (
-      <div className="mx-auto max-w-2xl rounded bg-white p-8 shadow-lg">
-        <h1 className="mb-6 text-center text-3xl font-bold text-blue-600">
-          Fill in the Blanks Quiz
-        </h1>
-        <div className="mb-8 rounded-lg bg-blue-50 p-6">
-          <h2 className="mb-4 text-xl font-semibold">Quiz Rules:</h2>
-          <ul className="list-disc space-y-3 pl-6">
-            <li>
-              You'll be presented with sentences containing 4 blank spaces.
-            </li>
-            <li>
-              Select the correct word from the 4 given options to fill each
-              blank.
-            </li>
-            <li>
-              Words are placed in the blanks in order (first click fills first
-              blank, etc.).
-            </li>
-            <li>
-              You can unselect a word by clicking on the filled blank it
-              occupies.
-            </li>
-            <li>You have 30 seconds to answer each question.</li>
-            <li>
-              The quiz will automatically move to the next question when time
-              runs out or you submit.
-            </li>
-            <li>
-              You can only proceed to the next question when all 4 blanks are
-              filled.
-            </li>
-            <li>At the end, you'll see your score and review your answers.</li>
-          </ul>
-        </div>
-        <div className="text-center">
-          <button
-            onClick={handleStartQuiz}
-            className="rounded-lg bg-blue-500 px-12 py-3 text-lg font-medium text-white shadow-md transition-colors hover:bg-blue-600"
-          >
-            Start Quiz
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // Results screen (Updated with enhanced background colors)
-  if (quizCompleted) {
-    return (
-      <div className="mx-auto max-w-2xl rounded bg-white p-6 shadow-lg">
-        <h1 className="mb-6 text-center text-3xl font-bold text-blue-700">
-          Quiz Results
-        </h1>
-        <div className="mb-8 text-center">
-          <p className="text-4xl font-semibold text-blue-600">
-            {score} <span className="text-2xl text-gray-600">/ 10</span>
-          </p>
-          <p className="mt-2 text-sm text-gray-500">
-            (Questions are only counted as correct if all 4 blanks are filled
-            correctly)
-          </p>
-        </div>
-
-        <div className="space-y-6">
-          {userAnswers.map((question, qIndex) => {
-            // Find the original question data
-            const questionData = questions[qIndex];
-            if (!questionData) return null;
-
-            // Check if any blanks were answered at all
-            const anyBlanksAnswered = question.blanks.some(
-              (blank) => blank.userAnswer !== null,
-            );
-
-            // Check if all blanks in this question were answered correctly
-            const allBlanksCorrect = question.blanks.every(
-              (blank) => blank.userAnswer === blank.correctAnswer,
-            );
-
-            // Check if all blanks were answered (no unanswered blanks)
-            const allBlanksAnswered = question.blanks.every(
-              (blank) => blank.userAnswer !== null,
-            );
-
-            // Determine question status
-            let questionStatus;
-            let statusClass;
-            let bgClass;
-            let borderClass;
-
-            if (!anyBlanksAnswered) {
-              questionStatus = "Not Answered";
-              statusClass = "bg-amber-100 text-amber-800";
-              bgClass = "bg-amber-50";
-              borderClass = "border-amber-200";
-            } else if (allBlanksCorrect) {
-              questionStatus = "Correct";
-              statusClass = "bg-green-100 text-green-800";
-              bgClass = "bg-green-50";
-              borderClass = "border-green-300";
-            } else if (!allBlanksAnswered) {
-              questionStatus = "Incomplete";
-              statusClass = "bg-amber-100 text-amber-800";
-              bgClass = "bg-amber-50";
-              borderClass = "border-amber-200";
-            } else {
-              questionStatus = "Incorrect";
-              statusClass = "bg-red-100 text-red-800";
-              bgClass = "bg-red-50";
-              borderClass = "border-red-200";
-            }
-
-            return (
-              <div
-                key={question.questionId}
-                className={`rounded-lg border p-4 shadow-sm ${bgClass} ${borderClass}`}
-              >
-                <div className="mb-3 flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-gray-800">
-                    Question {qIndex + 1}
-                  </h3>
-                  <span
-                    className={`rounded-full px-3 py-1 text-sm font-medium ${statusClass}`}
-                  >
-                    {questionStatus}
-                  </span>
-                </div>
-
-                <div className="mb-2 text-gray-700">
-                  {questionData.sentence}
-                </div>
-
-                <div className="mt-3 space-y-2 border-t pt-2">
-                  {question.blanks.map((blank) => {
-                    const userAns = blank.userAnswer;
-
-                    // Determine the state for this blank
-                    let textColorClass;
-                    let displayAnswer;
-                    let showCorrectAnswer = false;
-
-                    if (userAns === null) {
-                      textColorClass = "text-amber-600";
-                      displayAnswer = "(not answered)";
-                      showCorrectAnswer = true;
-                    } else if (userAns === blank.correctAnswer) {
-                      textColorClass = "text-green-600";
-                      displayAnswer = userAns;
-                      showCorrectAnswer = false;
-                    } else {
-                      textColorClass = "text-red-600";
-                      displayAnswer = userAns;
-                      showCorrectAnswer = true;
-                    }
-
-                    return (
-                      <div
-                        key={blank.blankId}
-                        className="flex items-center text-sm"
-                      >
-                        <span className="mr-2 text-gray-600">
-                          Blank {blank.blankId}:
-                        </span>
-                        <span className={`font-medium ${textColorClass}`}>
-                          {displayAnswer}
-                        </span>
-                        {showCorrectAnswer && (
-                          <span className="ml-2 text-green-600">
-                            (Correct: {blank.correctAnswer})
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="mt-8 flex justify-center">
-          <button
-            onClick={resetQuiz}
-            className="rounded-lg bg-blue-500 px-8 py-2 text-lg font-medium text-white transition-colors hover:bg-blue-600"
-          >
-            Try Again
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // Main quiz view
-  const currentQuestion = questions[currentQuestionIndex]; // Get current question data
-  if (!currentQuestion) {
-    // Handle case where currentQuestionIndex might be out of bounds (should not happen with proper logic)
-    return <div className="p-8 text-center">Loading question or error...</div>;
-  }
-
+  // Main app container with full-height centering
   return (
-    <div className="mx-auto max-w-3xl rounded-lg bg-white p-6 shadow-xl sm:p-8">
-      {" "}
-      {/* Increased max-width and padding */}
-      <div className="mb-6 flex items-center justify-between border-b pb-4">
-        <h1 className="text-2xl font-bold text-blue-700">Fill in the Blanks</h1>
-        <div className="text-lg font-bold">
-          <span
-            className={`rounded px-3 py-1 ${timeLeft <= 10 ? "bg-red-100 text-red-600" : "bg-blue-100 text-blue-600"}`}
-          >
-            Time: {timeLeft}s
-          </span>
-        </div>
-      </div>
-      <div className="mb-8">
-        <div className="mb-4 text-right text-sm text-gray-500">
-          {" "}
-          {/* Moved progress indicator */}
-          Question {currentQuestionIndex + 1} of {questions.length}
-        </div>
-        {renderSentenceWithBlanks()} {/* Renders the sentence with blanks */}
-        {/* Options Grid - Adjusted for potentially 4 options */}
-        <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {" "}
-          {/* Responsive grid */}
-          {currentQuestion.options.map((option) => {
-            const isUsed = isWordUsed(option);
-            return (
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-blue-50 to-indigo-100 p-4">
+      <div className="w-full max-w-3xl">
+        {!quizStarted && (
+          // Welcome screen (Improved styling)
+          <div className="mx-auto w-full rounded-xl bg-white p-8 shadow-xl transition-all duration-300">
+            <h1 className="mb-6 text-center text-3xl font-bold text-blue-700">
+              Fill in the Blanks Quiz
+            </h1>
+            <div className="mb-8 rounded-xl bg-blue-50 p-6 shadow-inner">
+              <h2 className="mb-4 text-xl font-semibold text-blue-800">
+                Quiz Rules:
+              </h2>
+              <ul className="list-disc space-y-3 pl-6 text-gray-700">
+                <li>
+                  You'll be presented with sentences containing 4 blank spaces.
+                </li>
+                <li>
+                  Select the correct word from the 4 given options to fill each
+                  blank.
+                </li>
+                <li>
+                  Words are placed in the blanks in order (first click fills
+                  first blank, etc.).
+                </li>
+                <li>
+                  You can unselect a word by clicking on the filled blank it
+                  occupies.
+                </li>
+                <li>You have 30 seconds to answer each question.</li>
+                <li>
+                  The quiz will automatically move to the next question when
+                  time runs out or you submit.
+                </li>
+                <li>
+                  You can only proceed to the next question when all 4 blanks
+                  are filled.
+                </li>
+                <li>
+                  At the end, you'll see your score and review your answers.
+                </li>
+              </ul>
+            </div>
+            <div className="text-center">
               <button
-                key={option}
-                onClick={() => handleWordSelect(option)}
-                disabled={isUsed}
-                className={`rounded-md px-4 py-2 text-center transition-colors duration-150 ${
-                  isUsed
-                    ? "cursor-not-allowed bg-gray-300 text-gray-500 opacity-70"
-                    : "border border-gray-300 bg-gray-100 hover:bg-blue-100 hover:text-blue-700 focus:ring-2 focus:ring-blue-300 focus:outline-none"
+                onClick={handleStartQuiz}
+                className="rounded-lg bg-blue-600 px-12 py-3 text-lg font-medium text-white shadow-lg transition-all duration-200 hover:bg-blue-700 hover:shadow-xl focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:outline-none"
+              >
+                Start Quiz
+              </button>
+            </div>
+          </div>
+        )}
+
+        {quizStarted && !quizCompleted && (
+          // Main quiz view (Improved styling)
+          <div className="mx-auto w-full rounded-xl bg-white p-6 shadow-xl transition-all duration-300 sm:p-8">
+            <div className="mb-6 flex items-center justify-between border-b pb-4">
+              <h1 className="text-2xl font-bold text-blue-700">
+                Fill in the Blanks
+              </h1>
+              <div className="text-lg font-bold">
+                <span
+                  className={`rounded-lg px-3 py-1 ${
+                    timeLeft <= 10
+                      ? "bg-red-100 text-red-600"
+                      : "bg-blue-100 text-blue-700"
+                  }`}
+                >
+                  Time: {timeLeft}s
+                </span>
+              </div>
+            </div>
+            <div className="mb-8">
+              <div className="mb-4 text-right text-sm text-gray-500">
+                Question {currentQuestionIndex + 1} of {questions.length}
+              </div>
+              {renderSentenceWithBlanks()}
+
+              {/* Options Grid - Improved button styling */}
+              <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
+                {questions[currentQuestionIndex]?.options.map((option) => {
+                  const isUsed = isWordUsed(option);
+                  return (
+                    <button
+                      key={option}
+                      onClick={() => handleWordSelect(option)}
+                      disabled={isUsed}
+                      className={`rounded-lg px-4 py-3 text-center font-medium transition-all duration-200 ${
+                        isUsed
+                          ? "cursor-not-allowed bg-gray-200 text-gray-400"
+                          : "border border-gray-300 bg-white shadow hover:bg-blue-50 hover:shadow-md focus:ring-2 focus:ring-blue-300 focus:outline-none"
+                      }`}
+                    >
+                      {option}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="mt-8 border-t pt-6 text-center">
+              <button
+                onClick={handleNextQuestion}
+                disabled={!allBlanksFilled()}
+                className={`rounded-lg px-10 py-3 text-lg font-medium transition-all duration-200 ${
+                  allBlanksFilled()
+                    ? "bg-blue-600 text-white shadow-md hover:bg-blue-700 hover:shadow-lg focus:ring-2 focus:ring-blue-300 focus:outline-none"
+                    : "cursor-not-allowed bg-gray-300 text-gray-500"
                 }`}
               >
-                {option}
+                {currentQuestionIndex < questions.length - 1
+                  ? "Next Question"
+                  : "Finish Quiz"}
               </button>
-            );
-          })}
-        </div>
-      </div>
-      <div className="mt-8 border-t pt-6 text-center">
-        <button
-          onClick={handleNextQuestion}
-          disabled={!allBlanksFilled()} // Use the memoized callback
-          className={`rounded-lg px-10 py-3 text-lg font-medium transition-colors duration-200 ${
-            allBlanksFilled()
-              ? "bg-blue-500 text-white shadow hover:bg-blue-600 hover:shadow-md"
-              : "cursor-not-allowed bg-gray-300 text-gray-500"
-          }`}
-        >
-          {currentQuestionIndex < questions.length - 1
-            ? "Next Question"
-            : "Finish Quiz"}{" "}
-          {/* Dynamic button text */}
-        </button>
+            </div>
+          </div>
+        )}
+
+        {quizCompleted && (
+          // Results screen (Improved styling)
+          <div className="mx-auto w-full rounded-xl bg-white p-6 shadow-xl transition-all duration-300 sm:p-8">
+            <h1 className="mb-6 text-center text-3xl font-bold text-blue-700">
+              Quiz Results
+            </h1>
+            <div className="mb-8 text-center">
+              <p className="text-4xl font-semibold text-blue-600">
+                {score} <span className="text-2xl text-gray-600">/ 10</span>
+              </p>
+              <p className="mt-2 text-sm text-gray-500">
+                (Questions are only counted as correct if all 4 blanks are
+                filled correctly)
+              </p>
+            </div>
+
+            <div className="space-y-6">
+              {userAnswers.map((question, qIndex) => {
+                // Find the original question data
+                const questionData = questions[qIndex];
+                if (!questionData) return null;
+
+                // Check if any blanks were answered at all
+                const anyBlanksAnswered = question.blanks.some(
+                  (blank) => blank.userAnswer !== null,
+                );
+
+                // Check if all blanks in this question were answered correctly
+                const allBlanksCorrect = question.blanks.every(
+                  (blank) => blank.userAnswer === blank.correctAnswer,
+                );
+
+                // Check if all blanks were answered (no unanswered blanks)
+                const allBlanksAnswered = question.blanks.every(
+                  (blank) => blank.userAnswer !== null,
+                );
+
+                // Determine question status
+                let questionStatus;
+                let statusClass;
+                let bgClass;
+                let borderClass;
+
+                if (!anyBlanksAnswered) {
+                  questionStatus = "Not Answered";
+                  statusClass = "bg-amber-100 text-amber-800";
+                  bgClass = "bg-amber-50";
+                  borderClass = "border-amber-200";
+                } else if (allBlanksCorrect) {
+                  questionStatus = "Correct";
+                  statusClass = "bg-green-100 text-green-800";
+                  bgClass = "bg-green-50";
+                  borderClass = "border-green-300";
+                } else if (!allBlanksAnswered) {
+                  questionStatus = "Incomplete";
+                  statusClass = "bg-amber-100 text-amber-800";
+                  bgClass = "bg-amber-50";
+                  borderClass = "border-amber-200";
+                } else {
+                  questionStatus = "Incorrect";
+                  statusClass = "bg-red-100 text-red-800";
+                  bgClass = "bg-red-50";
+                  borderClass = "border-red-200";
+                }
+
+                return (
+                  <div
+                    key={question.questionId}
+                    className={`rounded-lg border p-5 shadow-sm transition-all duration-200 ${bgClass} ${borderClass}`}
+                  >
+                    <div className="mb-3 flex items-center justify-between">
+                      <h3 className="text-lg font-semibold text-gray-800">
+                        Question {qIndex + 1}
+                      </h3>
+                      <span
+                        className={`rounded-full px-3 py-1 text-sm font-medium ${statusClass}`}
+                      >
+                        {questionStatus}
+                      </span>
+                    </div>
+
+                    <div className="mb-4 text-gray-700">
+                      {questionData.sentence}
+                    </div>
+
+                    <div className="mt-4 space-y-2 border-t pt-3">
+                      {question.blanks.map((blank) => {
+                        const userAns = blank.userAnswer;
+
+                        // Determine the state for this blank
+                        let textColorClass;
+                        let displayAnswer;
+                        let showCorrectAnswer = false;
+
+                        if (userAns === null) {
+                          textColorClass = "text-amber-600";
+                          displayAnswer = "(not answered)";
+                          showCorrectAnswer = true;
+                        } else if (userAns === blank.correctAnswer) {
+                          textColorClass = "text-green-600";
+                          displayAnswer = userAns;
+                          showCorrectAnswer = false;
+                        } else {
+                          textColorClass = "text-red-600";
+                          displayAnswer = userAns;
+                          showCorrectAnswer = true;
+                        }
+
+                        return (
+                          <div
+                            key={blank.blankId}
+                            className="flex items-center text-sm"
+                          >
+                            <span className="mr-2 text-gray-600">
+                              Blank {blank.blankId}:
+                            </span>
+                            <span className={`font-medium ${textColorClass}`}>
+                              {displayAnswer}
+                            </span>
+                            {showCorrectAnswer && (
+                              <span className="ml-2 text-green-600">
+                                (Correct: {blank.correctAnswer})
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="mt-8 flex justify-center">
+              <button
+                onClick={resetQuiz}
+                className="rounded-lg bg-blue-600 px-10 py-3 text-lg font-medium text-white shadow-md transition-all duration-200 hover:bg-blue-700 hover:shadow-lg focus:ring-2 focus:ring-blue-300 focus:outline-none"
+              >
+                Try Again
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
