@@ -10,7 +10,7 @@ A Next.js-based quiz application where users fill in the blanks in sentences by 
 - **Results Overview:** At the end, the user receives a detailed score and breakdown for each question.
 - **Modular Architecture:** Clear separation of concerns using components, utilities, and data files.
 
-## Deployment:
+## Deployment: [Live Link](https://complete-the-sentence-test-kuueo29eo-sudhanshs-projects.vercel.app/)
 
 ## Development
 
